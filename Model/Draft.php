@@ -32,18 +32,8 @@ class Draft extends DraftAppModel {
 			),
 		),
 	);
-
-	/**
-	* List of fields to search for using quick search
-	*/
-	public $searchFields = array('Draft.id','Draft.model');
-
-	/**
-	* List of fields that can be updated via ajax.
-	*/
-	public $ajaxFields = array();
 	
-	public function saveDraft($data, $settings = array()) {
+	public function saveDraft($data) {
 		$conditions = array(
 			'model' => $data['model'],
 			'model_id' => $data['model_id'],

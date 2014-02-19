@@ -43,6 +43,13 @@ class DraftTest extends CakeTestCase {
  * @return void
  */
 	public function testSaveDraft() {
+		$data = array(
+			'model' => 'TestModel',
+			'model_id' => 1,
+			'json' => '{"TestModel":{"id":1,"body":"This is a subtle change.","modified":"2014-02-18 20:58:45"}}'
+		);
+		$result = $this->Draft->saveDraft($data);
+		$this->assertTrue(!empty($result));
 	}
 
 }
