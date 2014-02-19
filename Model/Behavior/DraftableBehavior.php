@@ -19,30 +19,42 @@
   *
   * @example
   	public $actsAs = array('Draft.Draftable' => array(
-  		'bind'            => true,          //attach Draft as HasMany relationship for you onFind and if contained
+  		'bind' => true, //attach Draft as HasMany relationship for you onFind and if contained (false by default)
+  		'modified_field' => 'updated' //modified field is updated, used in cleanup. (modified by default)
   	));
 
   	Save A Draft
   	@example
+  	$data = array(
+  		'Model' => array(
+  			'field1' => 'value',
+  		)
+  	);
   	$this->Model->save($data, array('draft' => true)); //saves the data as a draft
+  	@example
   	$data = array(
   		'Model' => array(
   			'draft' => true,
   			'field1' => 'value',
-  			'field2' => 'value',
   		)
   	);
   	$this->Model->save($data); //will save as draft because 'draft' is set to true in $data['Model']
+  	@example
+  	$this->Model->data = array(
+  		'Model' => array(
+  			'field1' => 'value',
+  		)
+  	); 
   	$this->Model->saveDraft(); //will save any data in $Model->data as draft.
 
   	Find Draft
   	@example
   	$data = $this->Model->find('first', array('draft' => true));
-  	$this->request->data = $this->Model->mergeData($data);
+  	$this->request->data = $this->Model->mergeDraft($data);
   	@example
   	$this->Model->bindDraft();
   	$data = $this->Model->find('first', array('contain' => array('Draft')));
-  	$this->request->data = $this->Model->mergeData($data);
+  	$this->request->data = $this->Model->mergeDraft($data);
   	@example
   	$this->request->data = $this->Model->findDraft(array(
   		'conditions' => array(
