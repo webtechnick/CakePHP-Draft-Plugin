@@ -33,36 +33,56 @@
   		)
   	);
   	$this->Model->save($data); //will save as draft because 'draft' is set to true in $data['Model']
+  	$this->Model->saveDraft(); //will save any data in $Model->data as draft.
 
   	Find Draft
   	@example
+  	$data = $this->Model->find('first', array('draft' => true));
+  	$this->request->data = $this->Model->mergeData($data);
+  	@example
+  	$this->Model->bindDraft();
+  	$data = $this->Model->find('first', array('contain' => array('Draft')));
+  	$this->request->data = $this->Model->mergeData($data);
+  	@example
   	$this->request->data = $this->Model->findDraft(array(
   		'conditions' => array(
-  		 //your model conditions
-  		)
+  		 	//your model conditions
+  		),
+  		'contain' => array(
+  			//Your contains
+  		),
   	));
-  	
+
   	Find Unsaved record draft for user
   	@example
-  	$this->request->data = $this->Model->findDraftByUser();
+  	$this->request->data = $this->Model->findDraftByUser(); //Find draft by logged in user
+  	$this->request->data = $this->Model->findDraftByUser(1); //Find draft by logged in user_id 1
+
+  	Delete a Draft
+  	@example
+  	$this->Model->deleteDraft(); //will delete any draft data saved to $Model->id;
 
   * @version: since 1.0
   * @author: Nick Baker
   * @link: http://www.webtechnick.com
   */
 App::import('Component', 'Auth');
+App::uses('Hash','Utility');
 //App::uses('AuthComponent', 'Controller/Component');
 class DraftableBehavior extends ModelBehavior {
 	public $Draft = null;
 	public $errors = array();
 	/**
 	* Setup the behavior
+	* @param Model model
+	* @param array of settings
 	*/
-	public function setUp(Model $Model, $settings = array()){
+	public function setUp(Model $Model, $settings = array()) {
 		$settings = array_merge(array(
-			'bind' => false
+			'bind' => false,
+			'modified_field' => 'modified',
 		), (array)$settings);
-		if(!$Model->Behaviors->attached('Containable')){
+		if (!$Model->Behaviors->attached('Containable')) {
 			$Model->Behaviors->attach('Containable');
 		}
 		$this->settings[$Model->alias] = $settings;
@@ -75,10 +95,20 @@ class DraftableBehavior extends ModelBehavior {
 	*/
 	public function beforeSave(Model $Model, $options = array()){
 		if (array_key_exists('draft', $options) || !empty($Model->data[$Model->alias]['draft'])) {
-			return $this->saveDraft($Model); //we're saving a draft, not the actual record.
+			$this->saveDraft($Model); //we're saving a draft, not the actual record.
+			return false; //to hault the normal draft save
 		} else {
 			return $Model->beforeSave(); //if we're not saving a draft, save it normally.
 		}
+	}
+
+	/**
+	* After save, will delete any draft data for the id and model.
+	* @param Model model
+	*/
+	public function afterSave(Model $Model, $created = false, $options = array()) {
+		$this->deleteDraft($Model);
+		return $Model->afterSave($created);
 	}
 
 	/**
@@ -86,25 +116,18 @@ class DraftableBehavior extends ModelBehavior {
 	* Only adds the bind if contained in the query
 	* @param Model model
 	* @param array query
+	* @return result of Model beforeFind
 	*/
 	public function beforeFind(Model $Model, $query = array()){
-		if ($this->settings[$Model->alias]['bind']) {
-			//Only contain if we have it contained, or if no contain is specified
-			if (!isset($query['contain']) || (isset($query['contain']) && (in_array('Draft', $query['contain']) || key_exists('Draft', $query['contain'])))) {
-				$bind_options = array(
-					'className' => 'Draft.Draft',
-					'foreignKey' => 'model_id',
-					'conditions' => array("Draft.model" => $Model->alias)
-				);
-				if (isset($query['contain']['Draft'])) {
-					$bind_options = array_merge($bind_options, $query['contain']['Draft']);
-				}
-				$Model->bindModel(array(
-					'hasMany' => array(
-						'Draft' => $bind_options
-					)
-				));
-			}
+		if (!empty($query['draft'])) {
+			//bind if we explicicty ask for it.
+			$this->bindDraft($Model);
+		} elseif (isset($query['contain']) && (in_array('Draft', $query['contain']) || key_exists('Draft', $query['contain']))) {
+			//bind if we ask for it in contain, regardless of autobind.
+			$this->bindDraft($Model);
+		} elseif ($this->settings[$Model->alias]['bind'] && !isset($query['contain'])) {
+			//Only auto contain and no contain is specified
+			$this->bindDraft($Model);
 		}
 		return $Model->beforeFind($query);
 	}
@@ -112,18 +135,19 @@ class DraftableBehavior extends ModelBehavior {
 	/**
 	* Bind the icing model on demand, this is useful right before a call in which you want to contain
 	* but don't have the association.
+	* @param Model model
+	* @return result of bindModel
 	*/
-	public function bindDraft(Model $Model){
-		$bind_options = array(
-			'className' => 'Draft.Draft',
-			'foreignKey' => 'model_id',
-			'conditions' => array("Draft.model" => $Model->alias)
-		);
-		$Model->bindModel(array(
-			'hasMany' => array(
-				'Draft' => $bind_options
+	public function bindDraft(Model $Model, $reset = true){
+		return $Model->bindModel(array(
+			'hasOne' => array(
+				'Draft' => array(
+					'className' => 'Draft.Draft',
+					'foreignKey' => 'model_id',
+					'conditions' => array("Draft.model" => $Model->alias)
+				)
 			)
-		));
+		), $reset);
 	}
 
 	/**
@@ -143,6 +167,7 @@ class DraftableBehavior extends ModelBehavior {
 	* @return result of find.
 	*/
 	public function findDraft(Model $Model, $options = array()) {
+		$this->bindDraft($Model);
 		if (isset($options['contain'])) {
 			$options['contain'][] = 'Draft'; //Add draft to it if we don't have it.
 		}
@@ -151,36 +176,77 @@ class DraftableBehavior extends ModelBehavior {
 			'contain' => array('Draft')
 		), (array) $options);
 		$data = $Model->find('first', $options);
-		
+
+		return $this->mergeDraft($Model, $data);
+	}
+	
+	/**
+	* Merge the returned draft into the return value.
+	* @param Model model
+	* @param array of data
+	* @return data
+	*/
+	public function mergeDraft(Model $Model, $data) {
 		//Copy original record into it's ModelOriginal key.
 		$data[$Model->alias . 'Original'] = $data[$Model->alias];
 		if (!empty($data) && !empty($data['Draft'])) {
 			//Grab and merge the draft data into the alias.
 			$draft_data = json_decode($data['Draft']['json'], true);
-			$data[$Model->alias] = array_merge($data[$Model->alias], $draft_data[$Model->alias]);
+			$data = Hash::merge($data, $draft_data);
 		}
 		return $data;
 	}
-	
+
 	/**
 	* Find a draft by the logged in user.
 	* @param Model model
 	* @param array of options
 	* @return non-saved data of drafts
 	*/
-	public function findDraftByUser(Model $Model, $options = array()) {
+	public function findDraftByUser(Model $Model, $userId = null) {
+		if ($userId === null) {
+			$userId = $this->userId($Model);
+		}
 		$draft = $this->Draft->find('first', array(
 			'conditions' => array(
-				'user_id' => $this->userId(),
-				'model' => $Model->alias
+				'user_id' => $userId,
+				'model' => $Model->alias,
+				'model_id' => null
 			),
 			'order' => array('Draft.modified DESC')
 		));
 		$retval = array();
 		if (!empty($draft)) {
-			$retval[$Model->alias] = json_decode($data['Draft']['json'], true);
+			$retval = json_decode($draft['Draft']['json'], true);
 		}
 		return $retval;
+	}
+
+	/**
+	* Goes through the list of drafts and deletes anything that is modified before the
+	* records saved modified date (ie, it's been saved).
+	* @param Model model
+	* @return mixed int of drafts cleared, or false if no modified or updated field is detected on model
+	*/
+	public function cleanupDrafts(Model $Model) {
+		if (!$Model->hasField($this->settings[$Model->alias]['modified_field'])) {
+			return false;
+		}
+		$drafts = $this->Draft->find('all', array(
+			'fields' => array('Draft.modified','Draft.model','Draft.model_id','Draft.id'),
+			'conditions' => array('Draft.model_id !=' => null, 'Draft.model' => $Model->alias)
+		));
+		$count = 0;
+		foreach ($drafts as $draft) {
+			if ($Model) {
+				$Model->id = $draft['Draft']['model_id'];
+				if (strtotime($draft['Draft']['modified']) < strtotime($Model->field($this->settings[$Model->alias]['modified_field']))) {
+					$count++;
+					$this->Draft->delete($draft['Draft']['id']);
+				}
+			}
+		}
+		return $count;
 	}
 
 	/**
@@ -189,24 +255,45 @@ class DraftableBehavior extends ModelBehavior {
 	* @param Model model
 	* @param boolean deleted
 	*/
-	private function saveDraft(Model $Model){
+	public function saveDraft(Model $Model, $data = array()){
+		if ($data === array()) {
+			$data = $Model->data;
+		}
 		$model_id = null;
 		if ($Model->id) {
 			$model_id = $Model->id;
 		}
-		if (isset($Model->data[$Model->alias][$Model->primaryKey]) && !empty($Model->data[$Model->alias][$Model->primaryKey])) {
-			$model_id = $Model->data[$Model->alias][$Model->primaryKey];
+		if (isset($data[$Model->alias][$Model->primaryKey]) && !empty($data[$Model->alias][$Model->primaryKey])) {
+			$model_id = $data[$Model->alias][$Model->primaryKey];
 		}
-		$data = $Model->data; //cache the data incase the model has some afterfind stuff that sets data
 		$draft_data = array(
 			'user_id' => $this->userId($Model),
 			'model_id' => $model_id,
 			'model' => $Model->alias,
 			'json' => json_encode($data)
 		);
-		return $this->Draft->saveVersion($draft_data, $this->settings[$Model->alias]);
+		return $this->Draft->saveDraft($draft_data, $this->settings[$Model->alias]);
 	}
-	
+
+	/**
+	* Delete all the draft data saved for a paticular record
+	* @param Model model
+	* @return boolean success
+	*/
+	public function deleteDraft(Model $Model, $id = null) {
+		if ($id != null) {
+			$Model->id = $id;
+		}
+		$conditions = array(
+			'model' => $Model->alias,
+			'model_id' => $Model->id,
+		);
+		if ($this->Draft->hasAny($conditions)) {
+			return $this->Draft->deleteAll($conditions);
+		}
+		return true;
+	}
+
 	/**
 	* Grab the userID from the AuthComponent or getUserId in the model somewhere.
 	* @param Model model
@@ -219,22 +306,6 @@ class DraftableBehavior extends ModelBehavior {
 			return AuthComponent::user('id');
 		}
 		return null;
-	}
-	
-	/**
-	* Delete all the draft data saved for a paticular record
-	* @param Model model
-	* @return boolean success
-	*/
-	private function deleteDraft(Model $Model) {
-		$conditions = array(
-			'model' => $Model->alias,
-			'model_id' => $Model->id,
-		);
-		if ($this->Draft->hasAny($conditions)) {
-			return $this->Draft->deleteAll($conditions);
-		}
-		return true;
 	}
 
 	/**

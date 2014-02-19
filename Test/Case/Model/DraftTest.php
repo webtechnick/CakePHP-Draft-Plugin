@@ -1,19 +1,18 @@
 <?php
 App::uses('Draft', 'Draft.Model');
-App::uses('BaseTest', 'Test/Case');
 
 /**
  * Draft Test Case
  *
  */
-class DraftTest extends BaseTest {
+class DraftTest extends CakeTestCase {
 
 /**
- * Additional Fixtures
+ * Fixtures
  *
  * @var array
  */
-	public $addFixtures = array(
+	public $fixtures = array(
 		'plugin.draft.draft'
 	);
 
@@ -36,6 +35,14 @@ class DraftTest extends BaseTest {
 		unset($this->Draft);
 
 		parent::tearDown();
+	}
+
+/**
+ * testSaveDraft method
+ *
+ * @return void
+ */
+	public function testSaveDraft() {
 	}
 
 }
