@@ -40,21 +40,12 @@ class DraftsController extends DraftAppController {
 	*/
 	public function delete($model = null, $model_id = null) {
 		$this->autoRender = false;
-		if ($model && $model_id) {
+		if ($model) {
 			$Model = ClassRegistry::init($model);
 			if ($Model && $Model->Behaviors->attached('Draftable')) {
 				$Model->deleteDraft($model_id);
 			}
 		}
 		return $this->redirect($_SERVER['HTTP_REFERER']);
-		/*$this->autoRender = false;
-		if (!empty($this->request->data) && $model) {
-			$Model = ClassRegistry::init($model);
-			if ($Model && $Model->Behaviors->attached('Draftable')) {
-				$model_id = isset($this->request->data[$Model->alias][$Model->primaryKey]) ? $this->request->data[$Model->alias][$Model->primaryKey] : null;
-				return !!$Model->deleteDraft($model_id);
-			}
-		}
-		return false;*/
 	}
 }

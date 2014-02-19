@@ -238,6 +238,8 @@ class DraftableBehavior extends ModelBehavior {
 		$retval = array();
 		if (!empty($draft)) {
 			$retval = json_decode($draft['Draft']['json'], true);
+			$retval[$Model->alias]['is_draft'] = true;
+			$retval['Draft'] = $draft['Draft'];
 		}
 		return $retval;
 	}
@@ -301,12 +303,12 @@ class DraftableBehavior extends ModelBehavior {
 	* @return boolean success
 	*/
 	public function deleteDraft(Model $Model, $id = null) {
-		if ($id != null) {
-			$Model->id = $id;
+		if ($id === null && $Model->id) {
+			$id = $Model->id;
 		}
 		$conditions = array(
 			'model' => $Model->alias,
-			'model_id' => $Model->id,
+			'model_id' => $id,
 		);
 		if ($this->Draft->hasAny($conditions)) {
 			return $this->Draft->deleteAll($conditions);
