@@ -134,7 +134,10 @@ class DraftableBehavior extends ModelBehavior {
 		if (!empty($query['draft'])) {
 			//bind if we explicicty ask for it.
 			$this->bindDraft($Model);
-		} elseif (isset($query['contain']) && (in_array('Draft', $query['contain']) || key_exists('Draft', $query['contain']))) {
+		} elseif (isset($query['contain']) && $query['contain'] == 'Draft') {
+			//Special case
+			$this->bindDraft($Model);
+		} elseif (isset($query['contain']) && is_array($query['contain']) && (key_exists('Draft', $query['contain']) || in_array('Draft', $query['contain']))) {
 			//bind if we ask for it in contain, regardless of autobind.
 			$this->bindDraft($Model);
 		} elseif ($this->settings[$Model->alias]['bind'] && !isset($query['contain'])) {
