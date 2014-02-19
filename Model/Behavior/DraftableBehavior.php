@@ -3,7 +3,7 @@
   * Attach to any model to creating drafts of the model.
   *
   * To determine the User making the save:
-  *   uses the $Model->getUserId() if the method exists (could implement in AppModel)
+  *   uses the $Model->getuserIdForDraft() if the method exists (could implement in AppModel)
   *   uses the AuthComponent::user() if the class exists (App::uses('AuthComponent', 'Controller/Component'))
   *   else, user_id = null
   *
@@ -138,7 +138,7 @@ class DraftableBehavior extends ModelBehavior {
 			//bind if we ask for it in contain, regardless of autobind.
 			$this->bindDraft($Model);
 		} elseif ($this->settings[$Model->alias]['bind'] && !isset($query['contain'])) {
-			//Only auto contain and no contain is specified
+			//Only auto contain and if auto is true and no contain is specified
 			$this->bindDraft($Model);
 		}
 		return $Model->beforeFind($query);
@@ -199,12 +199,17 @@ class DraftableBehavior extends ModelBehavior {
 	* @return data
 	*/
 	public function mergeDraft(Model $Model, $data) {
-		//Copy original record into it's ModelOriginal key.
-		$data[$Model->alias . 'Original'] = $data[$Model->alias];
-		if (!empty($data) && !empty($data['Draft'])) {
+		if (!isset($data[$Model->alias]) || empty($data)) {
+			return $data;
+		}
+		
+		if (!empty($data['Draft']['id'])) {
+			//Copy original record into it's ModelOriginal key.
+			$data[$Model->alias . 'Original'] = $data[$Model->alias];
 			//Grab and merge the draft data into the alias.
 			$draft_data = json_decode($data['Draft']['json'], true);
 			$data = Hash::merge($data, $draft_data);
+			$data[$Model->alias]['is_draft'] = true;
 		}
 		return $data;
 	}
@@ -217,7 +222,7 @@ class DraftableBehavior extends ModelBehavior {
 	*/
 	public function findDraftByUser(Model $Model, $userId = null) {
 		if ($userId === null) {
-			$userId = $this->userId($Model);
+			$userId = $this->userIdForDraft($Model);
 		}
 		$draft = $this->Draft->find('first', array(
 			'conditions' => array(
@@ -279,7 +284,7 @@ class DraftableBehavior extends ModelBehavior {
 			$model_id = $data[$Model->alias][$Model->primaryKey];
 		}
 		$draft_data = array(
-			'user_id' => $this->userId($Model),
+			'user_id' => $this->userIdForDraft($Model),
 			'model_id' => $model_id,
 			'model' => $Model->alias,
 			'json' => json_encode($data)
@@ -311,7 +316,7 @@ class DraftableBehavior extends ModelBehavior {
 	* @param Model model
 	* @return mixed int of ID or null
 	*/
-	private function userId(Model $Model) {
+	private function userIdForDraft(Model $Model) {
 		if (method_exists($Model, 'getUserId')) {
 			return $Model->getUserId();
 		} elseif (class_exists('AuthComponent') && class_exists('CakeSession') && CakeSession::started()) {
