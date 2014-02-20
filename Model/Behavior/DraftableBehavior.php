@@ -3,7 +3,7 @@
   * Attach to any model to creating drafts of the model.
   *
   * To determine the User making the save:
-  *   uses the $Model->getuserIdForDraft() if the method exists (could implement in AppModel)
+  *   uses the $Model->getUserId() if the method exists (could implement in AppModel)
   *   uses the AuthComponent::user() if the class exists (App::uses('AuthComponent', 'Controller/Component'))
   *   else, user_id = null
   *
