@@ -109,6 +109,41 @@ You can also use the custom findDraft method which does the merge for your autom
 		)
 	));
 
+The data return (and Merged) will include any contains you included along with the Draft.  If there is an active Draft, the Draft changes are merged into the Model, and a new Key of `ModelOringial` is created for your reference and ease of switching between draft and original record. (draft being the default editable in your forms).
+
+Model with an active draft.
+
+	$data = array(
+		'Model' => array(
+			'field' => 'value',
+			'field2' => 'value',
+			'is_draft' => true,
+		),
+		'Draft' => array(
+			'id' => 'long-string-id',
+			'user_id' => 1,
+			//...
+		),
+		'ModelOriginal' => array(
+			'field' => 'original_value',
+			'field2 => 'original_value',
+		)
+	);
+
+Model without an active draft.
+
+	$data = array(
+		'Model' => array(
+			'field' => 'value',
+			'field2' => 'value',
+		),
+		'Draft' => array(
+			'id' => null,
+			'user_id' => null,
+			//...
+		),
+	);
+
 ### Find Draft by User
 
 You can also save drafts of records that aren't actually create yet.  Drafts are automatically tracked to a user, to use this feature you'll need to either be using `AuthComponent::user('id')` or you'll need to define `$Model->getUserId()`
