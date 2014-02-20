@@ -1,5 +1,3 @@
-# Work In Progress (WIP)
-
 # Draft CakePHP Plugin
 * Author: Nick Baker
 * Version: 1.0
@@ -135,11 +133,15 @@ Once you can track users, you can then retrieve drafts that don't have a record 
 
 ## Example Setups
 
+#### Controller Changes
+
 Update your Controller to find and merge drafts for your request data.
 
 	$this->request->data = $this->Model->findDraft(array(
 		'conditions' => array('Model.id' => $id),
 	));
+
+Full example of edit function.
 
 	//Example Edit finding and restoring draft data
 	function edit($id = null) {
@@ -162,6 +164,12 @@ Update your Controller to find and merge drafts for your request data.
 
 You'll want to alter your add function as well if you intend on allowing drafts of unsaved content (new records)
 
+	if ($data = $this->Model->findDraftByUser()) {
+		$this->request->data = $data;
+	}
+
+Full example of add function.
+
 	//Example Add Pulling up Draft data from unsaved records.
 	function add() {
 		if (!empty($this->request->data)) {
@@ -177,4 +185,55 @@ You'll want to alter your add function as well if you intend on allowing drafts 
 			$this->request->data = $data;
 		}
 	}
+
+#### View Changes
+
+##### Save Draft Button
+
+You'll want to add the `Save Draft` Button.  This feature requires the name of the Model you have Draftable on, as well as the HTML ID of the form you wish to Draft
+
+If you have a form like this:
+
+	<?php echo $this->Form->create('Model', array('id' => 'ModelForm')); ?>
+
+Your Draft Button would be this:
+
+	<?php echo $this->Draft->button('Save Draft', array('model' => 'Model', 'form_id' => 'ModelForm')); ?>
+
+This feature uses jQuery to attach and execute the draft save to the custom drafts controller via ajax (recommended setup).  If you don't want the auto script and you want to handle the draft save yourself you can turn off the auto scripting by adding `'script' => false` in the options.
+
+	<?php echo $this->Draft->button('Save Draft', array('model' => 'Model', 'script' => false)); ?>
 	
+Any additional options for the link, put into the options array.
+
+	<?php echo $this->Draft->button('Save Draft', array('class' => 'btn btn-large', 'escape' => false, 'model' => 'Model')); ?>
+
+##### Discard Button
+
+You'll also want the `Discard Draft' Button. When you're editing a draft, you'll also want the discard draft button to allow the user to blow away the draft and start fresh.
+
+	<?php echo $this->Draft->discard('Discard Draft', array('model' => 'Content', 'model_id' => $this->Form->value('Model.id'))); ?>
+	
+Again you can pass in any link option into the options and it will keep.
+
+	<?php echo $this->Draft->discard('Discard Draft', array('class' => 'btn btn-large btn-danger', 'model' => 'Content', 'model_id' => $this->Form->value('Model.id'))); ?>
+
+ProTip: Only show the discard button if you're actively editing a Draft.  Do so by checking for the `is_draft` field in the data.
+
+	<?php if (isset($this->request->data['Model']['is_draft'])): ?>
+		<?php echo $this->Draft->discard('Discard Draft', array('model' => 'Model', 'model_id' => $this->Form->value('Model.id'))); ?>
+	<?php endif; ?>
+
+##### Auto Draft Feature
+
+You can set an automatic timer to save drafts at certain intervals (every 60 seconds is default).  Again, like Save Draft feature -- this feature requires jQuery to work.
+
+	<?php echo $this->Draft->autoDraft(60, array('model' => 'Model', 'form_id' => 'ModelForm')); ?>
+
+## Basic Admin
+
+You can view and search all open drafts using the built in admin system.
+
+Navigate to `http://example.com/admin/draft/drafts` to see all your saved drafts.
+
+#### ENJOY! Comments are appreciated
