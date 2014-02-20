@@ -5,7 +5,9 @@ App::uses('DraftAppController', 'Draft.Controller');
  */
 class DraftsController extends DraftAppController {
 	
-	public $uses = array();
+	public $paginate = array(
+		'order' => 'Draft.modified DESC'
+	);
 	
 	/**
 	* Allow save if Auth is around.
@@ -47,5 +49,34 @@ class DraftsController extends DraftAppController {
 			}
 		}
 		return $this->redirect($_SERVER['HTTP_REFERER']);
+	}
+	
+	/**
+	* Admin index of drafts.
+	*/
+	public function admin_index($filter = null) {
+		if (!empty($this->request->data)) {
+			$filter = $this->request->data['Draft']['filter'];
+		}
+		$conditions = $this->Draft->generateFilterConditions($filter);
+		$this->set('drafts',$this->paginate($conditions));
+		$this->set('filter', $filter);
+	}
+	
+	public function admin_edit() {
+		$this->Session->setFlash('Add/Modify Drafts using the Helper on your edit forms.');
+		return $this->redirect(array('action' => 'index'));
+	}
+	
+	/**
+	* Admin view of drafts
+	*/
+	public function admin_view($id) {
+		if (!$id) {
+			$this->Session->setFlash(__('Invalid Draft ID'));
+			return $this->redirect(array('action' => 'index'));
+		}
+		$this->set('draft', $this->Draft->read(null, $id));
+		$this->set('id', $id);
 	}
 }

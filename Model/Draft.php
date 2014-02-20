@@ -12,6 +12,11 @@ class Draft extends DraftAppModel {
  * @var string
  */
 	public $displayField = 'model';
+	
+	/**
+	* Filter search fields
+	*/
+	public $searchFields = array('Draft.model','Draft.model_id','Draft.id','Draft.user_id');
 
 /**
  * Validation rules
