@@ -159,7 +159,7 @@ Otherwise `AuthComponent::user('id');` is used instead.
 Once you can track users, you can then retrieve drafts that don't have a record associated with them (new unsaved records)
 
 	$this->request->data = $this->Model->findDraftByUser(); //Find draft by logged in user
-	$this->request->data = $this->Model->findDraftByUser(1); //Find draft by logged in user_id of 1
+	$this->request->data = $this->Model->findDraftByUser(1); //Find draft by user_id of 1
 
 ### Delete A Draft
 
