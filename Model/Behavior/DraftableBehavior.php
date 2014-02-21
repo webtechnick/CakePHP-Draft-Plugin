@@ -315,6 +315,49 @@ class DraftableBehavior extends ModelBehavior {
 		}
 		return true;
 	}
+	
+	/**
+	* Get the difference between the current record and the draft
+	* @param Model model
+	* @param int model_id
+	* @param return the diff array of draft
+	*/
+	public function diffDraft(Model $Model, $id = null) {
+		$model_data = $Model->read(null, $id);
+		$draft_data = $this->Draft->find('first', array(
+			'conditions' => array(
+				'Draft.model' => $Model->alias,
+				'Draft.model_id' => $id
+			),
+		));
+		if (empty($model_data) && empty($draft_data)) {
+			return array();
+		} elseif (!empty($model_data) && empty($draft_data)) {
+			return $this->__diff($model_data[$Model->alias], array());
+		} elseif (empty($model_data) && !empty($draft_data)) {
+			return $this->__diff(array(), $draft_data[$Model->alias]);
+		}	elseif (!empty($model_data) && !empty($draft_data)) {
+			return $this->__diff($model_data[$Model->alias], $draft_data[$Model->alias]); 
+		}
+		return null;
+	}
+	
+	/**
+	 * Abstract for Hahs/Set/array_diff()
+	 *
+	 * @param array $one
+	 * @param array $two
+	 * @return array $diff
+	 */
+	private function __diff($one, $two) {
+		if (class_exists('Hash')) {
+			return Hash::diff($one, $two);
+		}
+		if (class_exists('Set')) {
+			return Set::diff($one, $two);
+		}
+		return array_diff($one, $two);
+	}
 
 	/**
 	* Grab the userID from the AuthComponent or getUserId in the model somewhere.
