@@ -1,5 +1,5 @@
 {
-	"name": "webtechnick/Draft",
+	"name": "webtechnick/draft",
 	"description": "CakePHP Draft Plugin",
 	"type": "cakephp-plugin",
 	"keywords": ["cakephp", "draft","behavior"],
