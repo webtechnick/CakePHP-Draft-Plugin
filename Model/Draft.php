@@ -12,7 +12,7 @@ class Draft extends DraftAppModel {
  * @var string
  */
 	public $displayField = 'model';
-	
+
 	/**
 	* Filter search fields
 	*/
@@ -25,19 +25,19 @@ class Draft extends DraftAppModel {
  */
 	public $validate = array(
 		'model' => array(
-			'notEmpty' => array(
-				'rule' => array('notEmpty'),
+			'notBlank' => array(
+				'rule' => array('notBlank'),
 				'message' => 'Must be associated with a model.',
 			),
 		),
 		'json' => array(
-			'notEmpty' => array(
-				'rule' => array('notEmpty'),
+			'notBlank' => array(
+				'rule' => array('notBlank'),
 				'message' => 'Model data must be present.',
 			),
 		),
 	);
-	
+
 	public function saveDraft($data) {
 		$conditions = array(
 			'model' => $data['model'],
